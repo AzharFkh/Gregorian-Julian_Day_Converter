@@ -28,7 +28,6 @@ class converter_date():
         self.JD = JD
 
     def tahun_kabisat(self):
-        """Return True if leap year, else False"""
         if (self.year % 4 == 0 and self.year % 100 != 0) or (self.year % 400 == 0):
             return True
         return False
