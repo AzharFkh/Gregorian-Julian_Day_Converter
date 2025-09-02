@@ -31,24 +31,32 @@ class converter_date():
         if (self.year % 4 == 0 and self.year % 100 != 0) or (self.year % 400 == 0):
             return True
         return False
-
+    
+    def tanggal_sesat(self):
+        if self.year == 1582 and self.month == 10 and 5 <= self.day <=14:
+            return True
+        return False
+    
     def ke_JD(self):
+
+        if self.tanggal_sesat():
+            raise ValueError("Tanggal tidak karena tidak ada di kalender")
+
+        kabisat = self.tahun_kabisat()
+
+        if self.month == 2 and self.day > (29 if kabisat else 28):
+            raise ValueError("Tanggal tidak valid untuk Februari di tahun ini")
         A = int(self.year / 100)
 
         if self.year > 1582:
             B = 2 + int(A / 4) - A
         elif self.year < 1582:
             B = 0
-        else:  # tahun == 1582
+        else:  
             if self.month > 10 or (self.month == 10 and self.day >= 15):
                 B = 2 + int(A / 4) - A
             else:
                 B = 0
-
-        kabisat = self.tahun_kabisat()
-
-        if self.month == 2 and self.day > (29 if kabisat else 28):
-            raise ValueError("Tanggal tidak valid untuk Februari di tahun ini")
 
         JD = 1720994.5 + int(365.25 * self.year) + int(30.6 * (self.month + 1)) + B + self.day
         return JD
@@ -100,7 +108,8 @@ if tipe_konversi == "Gregorian ke Julian Day":
         bulan_angka = bulan_map[bulan]
         try:
             JD_Date = converter_date(tahun, bulan_angka, hari)
-            st.success(f"Julian Day: {JD_Date.ke_JD()}")
+            JD = JD_Date.ke_JD()
+            st.success(f"Julian Day: {JD}")
         except ValueError as e:
             st.error(f"Error: {e}")
 
