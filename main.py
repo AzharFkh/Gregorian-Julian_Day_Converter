@@ -1,4 +1,6 @@
 import streamlit as st
+from converter_gregorian import GregorianConverter
+from converter_hijriah import HijriahConverter
 
 st.set_page_config(
     page_title="Date Converter",
@@ -9,120 +11,103 @@ st.title("Date Converter")
 st.markdown("### Pilih mode konversi tanggal berikut : ")
 tipe_konversi = st.radio(
     "pilih opsi dibawah",
-    ("Gregorian ke Julian Day", "Julian Day ke Gregorian")
+    ("Gregorian ke Julian Day", "Julian Day ke Gregorian", 
+     "Hijriah ke Julian Day", "Julian Day ke Hijriah", 
+     "Gregorian ke Hijriah", "Hijriah ke Gregorian")
 )
 
-bulan_map = {
+bulan_greg = {
     "Januari": 1, "Februari": 2, "Maret": 3, "April": 4, "Mei": 5, "Juni": 6,
     "Juli": 7, "Agustus": 8, "September": 9, "Oktober": 10, "November": 11, "Desember": 12
 }
+bulan_greg_reverse = {v: k for k, v in bulan_greg.items()}
 
-bulan_map_reverse = {v: k for k, v in bulan_map.items()}
+bulan_hijriah = {
+    "Muharram": 1, "Safar": 2, "Rabiul Awwal": 3, "Rabiul Akhir": 4,
+    "Jumadil Ula": 5, "Jumadil Akhir": 6, "Rajab": 7, "Sya'ban": 8,
+    "Ramadhan": 9, "Syawal": 10, "Dzulqa'dah": 11, "Dzulhijjah": 12
+}
+bulan_hijriah_reverse = {v: k for k, v in bulan_hijriah.items()}
 
 
-class converter_date():
-    def __init__(self, year = 2025, month=1, day=1, JD=None):
-        self.year = year
-        self.month = month
-        self.day = day
-        self.JD = JD
-
-    def tahun_kabisat(self):
-        if (self.year % 4 == 0 and self.year % 100 != 0) or (self.year % 400 == 0):
-            return True
-        return False
-    
-    def tanggal_sesat(self):
-        if self.year == 1582 and self.month == 10 and 5 <= self.day <=14:
-            return True
-        return False
-    
-    def ke_JD(self):
-
-        if self.tanggal_sesat():
-            raise ValueError("Tanggal tidak karena tidak ada di kalender")
-
-        kabisat = self.tahun_kabisat()
-
-        if self.month == 2 and self.day > (29 if kabisat else 28):
-            raise ValueError("Tanggal tidak valid untuk Februari di tahun ini")
-        A = int(self.year / 100)
-
-        if self.year > 1582:
-            B = 2 + int(A / 4) - A
-        elif self.year < 1582:
-            B = 0
-        else:  
-            if self.month > 10 or (self.month == 10 and self.day >= 15):
-                B = 2 + int(A / 4) - A
-            else:
-                B = 0
-
-        JD = 1720994.5 + int(365.25 * self.year) + int(30.6 * (self.month + 1)) + B + self.day
-        return JD
-
-    def ke_Gregorian(self):
-        JD = self.JD + 0.5
-        Z = int(JD)
-        F = JD - Z
-
-        if Z < 2299161:
-            A = Z
-        else:
-            alpha = int((Z - 1867216.25) / 36524.25)
-            A = Z + 1 + alpha - int(alpha / 4)
-
-        B = A + 1524
-        C = int((B - 122.1) / 365.25)
-        D = int(365.25 * C)
-        E = int((B - D) / 30.6001)
-
-        day = B - D - int(30.6001 * E) + F
-        if E < 14:
-            month = E - 1
-        else:
-            month = E - 13
-
-        if month > 2:
-            year = C - 4716
-        else:
-            year = C - 4715
-
-        self.day, self.month, self.year = int(day), month, year
-        return self.day, self.month, self.year
-
+# Gregorian → JD
 if tipe_konversi == "Gregorian ke Julian Day":
-    st.markdown("### Masukan tanggal Gregorian untuk dikonversi ke JD:")
-
-    with st.form("dateToConvert"):
-        hari = st.number_input("Masukan tanggal:", value=1, min_value=1, max_value=31, key="hari")
-        bulan = st.selectbox(
-            "Pilih bulan:",
-            list(bulan_map.keys()),
-            key="bulan"
-        )
-        tahun = st.number_input("Masukan tahun:", value=2025, min_value=-4713, max_value=2500, key="tahun")
+    with st.form("GregJD"):
+        hari = st.number_input("Masukan tanggal:", value=1, min_value=1, max_value=31, key="hari_greg_jd")
+        bulan = st.selectbox("Pilih bulan:", list(bulan_greg.keys()), key="bulan_greg_jd")
+        tahun = st.number_input("Masukan tahun:", value=2025, min_value=-4713, max_value=2500, key="tahun_greg_jd")
         submit_Greg = st.form_submit_button("Konversi")
 
     if submit_Greg:
-        bulan_angka = bulan_map[bulan]
+        bulan_angka = bulan_greg[bulan]
         try:
-            JD_Date = converter_date(tahun, bulan_angka, hari)
-            JD = JD_Date.ke_JD()
-            st.success(f"Julian Day: {JD}")
+            jd_val = GregorianConverter(year=tahun, month=bulan_angka, day=hari).to_JD()
+            st.success(f"Julian Day: {jd_val}")
         except ValueError as e:
             st.error(f"Error: {e}")
 
 
+# JD → Gregorian
 elif tipe_konversi == "Julian Day ke Gregorian":
-    st.markdown("### Masukan Julian Day untuk dikonversi ke Gregorian:")
-
-    with st.form("JDToDate"):
-        JD = st.number_input("Masukan Julian Day:", value=2460676.5, step=0.5, key="JD")
+    with st.form("JDGreg"):
+        JD = st.number_input("Masukan Julian Day:", value=2460676.5, step=0.5, key="jd_to_greg")
         submit_JD = st.form_submit_button("Konversi")
 
     if submit_JD:
-        JD_to_Date = converter_date(JD=JD)
-        tanggal, bulan, tahun = JD_to_Date.ke_Gregorian()
-        nama_bulan = bulan_map_reverse[bulan]
-        st.success(f"Tanggal Gregorian : {tanggal}, {nama_bulan} {tahun}")
+        d, m, y = GregorianConverter(JD=JD).from_JD()
+        st.success(f"Tanggal Gregorian : {d} {bulan_greg_reverse[m]} {y}")
+
+
+# Hijriah → JD
+elif tipe_konversi == "Hijriah ke Julian Day":
+    with st.form("HijJD"):
+        hari = st.number_input("Masukan tanggal:", value=1, min_value=1, max_value=30, key="hari_hij_jd")
+        bulan = st.selectbox("Pilih bulan:", list(bulan_hijriah.keys()), key="bulan_hij_jd")
+        tahun = st.number_input("Masukan tahun Hijriah:", value=1447, min_value=1, max_value=3000, key="tahun_hij_jd")
+        submit_Hijriah = st.form_submit_button("Konversi")
+
+    if submit_Hijriah:
+        bulan_angka = bulan_hijriah[bulan]
+        jd_val = HijriahConverter(year=tahun, month=bulan_angka, day=hari).to_JD()
+        st.success(f"Julian Day: {jd_val}")
+
+
+# JD → Hijriah
+elif tipe_konversi == "Julian Day ke Hijriah":
+    with st.form("JDHij"):
+        JD = st.number_input("Masukan Julian Day:", value=2460676.5, step=0.5, key="jd_to_hij")
+        submit_JD = st.form_submit_button("Konversi")
+
+    if submit_JD:
+        d, m, y = HijriahConverter(JD=JD).from_JD()
+        st.success(f"Tanggal Hijriah : {d} {bulan_hijriah_reverse[m]} {y} H")
+
+
+# Gregorian → Hijriah
+elif tipe_konversi == "Gregorian ke Hijriah":
+    with st.form("GregHij"):
+        hari = st.number_input("Masukan tanggal:", value=1, min_value=1, max_value=31, key="hari_greg_hij")
+        bulan = st.selectbox("Pilih bulan:", list(bulan_greg.keys()), key="bulan_greg_hij")
+        tahun = st.number_input("Masukan tahun:", value=2025, min_value=-4713, max_value=2500, key="tahun_greg_hij")
+        submit_GregHij = st.form_submit_button("Konversi")
+
+    if submit_GregHij:
+        bulan_angka = bulan_greg[bulan]
+        jd_val = GregorianConverter(year=tahun, month=bulan_angka, day=hari).to_JD()
+        d, m, y = HijriahConverter(JD=jd_val).from_JD()
+        st.success(f"Tanggal Hijriah: {d} {bulan_hijriah_reverse[m]} {y} H (JD: {jd_val})")
+
+
+# Hijriah → Gregorian
+elif tipe_konversi == "Hijriah ke Gregorian":
+    with st.form("HijGreg"):
+        hari = st.number_input("Masukan tanggal:", value=1, min_value=1, max_value=30, key="hari_hij_greg")
+        bulan = st.selectbox("Pilih bulan:", list(bulan_hijriah.keys()), key="bulan_hij_greg")
+        tahun = st.number_input("Masukan tahun:", value=1446, min_value=1, max_value=2000, key="tahun_hij_greg")
+        submit_HijGreg = st.form_submit_button("Konversi")
+
+    if submit_HijGreg:
+        bulan_angka = bulan_hijriah[bulan]
+        jd_val = HijriahConverter(year=tahun, month=bulan_angka, day=hari).to_JD()
+        d, m, y = GregorianConverter(JD=jd_val).from_JD()
+        st.success(f"Tanggal Gregorian: {d} {bulan_greg_reverse[m]} {y} (JD: {jd_val})")
